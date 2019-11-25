@@ -13,6 +13,9 @@ edition = "2018"
 criterion = "0.3"
 jemallocator = "0.3"
 
+[lib]
+bench = false
+
 [[bench]]
 name = "apache_access"
 harness = false
