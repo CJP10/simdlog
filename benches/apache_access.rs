@@ -1,5 +1,5 @@
 use criterion::*;
-use simdlog::apache_access::avx2::{Stage2, Structurals};
+use simdlog::apache_access::avx2::{Stage2, Stage1};
 
 use jemallocator::Jemalloc;
 use std::fs::File;
@@ -21,7 +21,7 @@ fn bench(c: &mut Criterion) {
     group.bench_function("random/find_structurals", |b| {
         b.iter(|| {
             for line in &lines {
-                Structurals::new(line.as_bytes()).find();
+                Stage1::new(line.as_bytes()).find();
             }
         })
     });

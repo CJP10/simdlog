@@ -35,7 +35,7 @@ macro_rules! static_cast_u64 {
     };
 }
 
-pub struct Structurals<'a> {
+pub struct Stage1<'a> {
     input: &'a [u8],
     len: usize,
     inside_quotes: u32,
@@ -44,7 +44,7 @@ pub struct Structurals<'a> {
     structurals: Vec<u32>,
 }
 
-impl<'a> Structurals<'a> {
+impl<'a> Stage1<'a> {
     pub const fn new(input: &'a [u8]) -> Self {
         Self {
             input,
@@ -100,7 +100,6 @@ impl<'a> Structurals<'a> {
     #[inline(always)]
     unsafe fn structurals_mask(&mut self, v: __m256i) -> u32 {
         // " 0x22 value = 2
-        // - 0x2d value = 1
         // SPACE 0x20 value = 1
         // [ 0x5b value = 4
         // ] 0x5d value = 4
@@ -115,8 +114,8 @@ impl<'a> Structurals<'a> {
         #[rustfmt::skip]
         let low_mask = _mm256_setr_epi8(
         //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 5, 0, 0,
-            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 5, 0, 0,
+            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0,
+            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0,
         );
 
         let low = _mm256_shuffle_epi8(low_mask, v);
