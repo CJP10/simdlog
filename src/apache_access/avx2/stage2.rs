@@ -23,14 +23,21 @@ impl<'a> Stage2<'a> {
     pub fn new(input: &'a [u8]) -> Self {
         Self {
             input,
-            structurals: Vec::new(),
+            structurals: Stage1::new(input).find(),
         }
     }
 
-    #[inline(always)]
+    pub fn new_with_structurals(input: &'a [u8], structurals: Vec<u32>) -> Self {
+        Self {
+            input,
+            structurals,
+        }
+    }
+
+    #[inline]
     pub fn parse(&mut self) -> Option<Log> {
         let mut log = Log::new();
-        self.structurals = Stage1::new(self.input).find();
+
         if self.structurals.len() != 16 {
             return None;
         }
