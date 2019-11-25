@@ -21,6 +21,20 @@ macro_rules! static_cast_u32 {
     };
 }
 
+#[macro_export]
+macro_rules! static_cast_i64 {
+    ($v:expr) => {
+        std::mem::transmute::<_, i64>($v)
+    };
+}
+
+#[macro_export]
+macro_rules! static_cast_u64 {
+    ($v:expr) => {
+        std::mem::transmute::<_, u64>($v)
+    };
+}
+
 pub struct Structurals<'a> {
     input: &'a [u8],
     len: usize,
@@ -44,28 +58,40 @@ impl<'a> Structurals<'a> {
 
     #[inline(always)]
     pub fn find(mut self) -> Vec<u32> {
-        let mut padding = [0u8; 32];
+        let mut padding = [0u8; 64];
 
         loop {
             if self.index >= self.len {
                 break;
             }
 
-            let v = if self.len >= self.index + 32 {
-                unsafe { _mm256_loadu_si256(self.input.as_ptr().add(self.index) as *const __m256i) }
+            let (v1, v2) = if self.len >= self.index + 64 {
+                unsafe {
+                    (
+                        _mm256_loadu_si256(self.input.as_ptr().add(self.index) as *const __m256i),
+                        _mm256_loadu_si256(
+                            self.input.as_ptr().add(self.index + 32) as *const __m256i
+                        ),
+                    )
+                }
             } else {
                 unsafe {
                     padding
                         .get_unchecked_mut(..self.len - self.index)
                         .clone_from_slice(self.input.get_unchecked(self.index..));
-                    _mm256_loadu_si256(padding.as_ptr() as *const __m256i)
+                    (
+                        _mm256_loadu_si256(padding.as_ptr() as *const __m256i),
+                        _mm256_loadu_si256(padding.as_ptr().add(32) as *const __m256i),
+                    )
                 }
             };
 
-            let mask = unsafe { self.structurals_mask(v) };
-            self.flatten_bits(mask);
+            let mask_1 = unsafe { self.structurals_mask(v1) as u64 };
+            let mask_2 = unsafe { self.structurals_mask(v2) as u64 };
 
-            self.index += 32;
+            self.flatten_bits(mask_1 | (mask_2 << 32));
+
+            self.index += 64;
         }
 
         self.structurals
@@ -80,15 +106,15 @@ impl<'a> Structurals<'a> {
         // ] 0x5d value = 4
 
         #[rustfmt::skip]
-            let high_mask = _mm256_setr_epi8(
-            //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+        let high_mask = _mm256_setr_epi8(
+        //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
             0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         );
 
         #[rustfmt::skip]
-            let low_mask = _mm256_setr_epi8(
-            //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+        let low_mask = _mm256_setr_epi8(
+        //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
             1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 5, 0, 0,
             1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 5, 0, 0,
         );
@@ -100,6 +126,7 @@ impl<'a> Structurals<'a> {
         );
 
         let lookup_mask = _mm256_and_si256(low, high);
+
         let mut structurals = static_cast_u32!(_mm256_movemask_epi8(_mm256_cmpgt_epi8(
             lookup_mask,
             _mm256_set1_epi8(0)
@@ -145,12 +172,23 @@ impl<'a> Structurals<'a> {
     }
 
     #[inline(always)]
-    fn flatten_bits(&mut self, mut bits: u32) {
+    fn flatten_bits(&mut self, mut bits: u64) {
         let cnt: usize = bits.count_ones() as usize;
         let mut l = self.structurals.len();
-        let idx_32_v = unsafe { _mm256_set1_epi32(static_cast_i32!(self.index as u32)) };
+        let idx_64_v = unsafe {
+            _mm256_set_epi32(
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+                static_cast_i32!(self.index as u32),
+            )
+        };
 
-        self.structurals.reserve(32);
+        self.structurals.reserve(64);
         unsafe {
             self.structurals.set_len(l + cnt);
         }
@@ -175,7 +213,7 @@ impl<'a> Structurals<'a> {
                 bits &= bits.wrapping_sub(1);
 
                 let v: __m256i = _mm256_set_epi32(v7, v6, v5, v4, v3, v2, v1, v0);
-                let v: __m256i = _mm256_add_epi32(idx_32_v, v);
+                let v: __m256i = _mm256_add_epi64(idx_64_v, v);
                 _mm256_storeu_si256(self.structurals.as_mut_ptr().add(l) as *mut __m256i, v);
             }
             l += 8;

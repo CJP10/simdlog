@@ -1,4 +1,4 @@
-use crate::apache::{Log, Structurals};
+use crate::apache_access::{avx2::stage1::Structurals, Log};
 use std::str::from_utf8_unchecked;
 
 #[macro_export]

@@ -1,8 +1,4 @@
-mod stage1;
-mod stage2;
-
-pub use stage1::*;
-pub use stage2::*;
+pub mod avx2;
 
 #[derive(Debug, PartialEq)]
 pub struct Log<'a> {
@@ -32,6 +28,7 @@ impl<'a> Log<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use avx2::Stage2;
 
     #[test]
     fn full_line() {

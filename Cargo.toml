@@ -14,7 +14,7 @@ criterion = "0.3"
 jemallocator = "0.3"
 
 [[bench]]
-name = "apache"
+name = "apache_access"
 harness = false
 
 [profile.bench]
