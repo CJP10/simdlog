@@ -1,40 +1,5 @@
 use std::arch::x86_64::*;
 
-#[macro_export]
-macro_rules! static_cast_i8 {
-    ($v:expr) => {
-        std::mem::transmute::<_, i8>($v)
-    };
-}
-
-#[macro_export]
-macro_rules! static_cast_i32 {
-    ($v:expr) => {
-        std::mem::transmute::<_, i32>($v)
-    };
-}
-
-#[macro_export]
-macro_rules! static_cast_u32 {
-    ($v:expr) => {
-        std::mem::transmute::<_, u32>($v)
-    };
-}
-
-#[macro_export]
-macro_rules! static_cast_i64 {
-    ($v:expr) => {
-        std::mem::transmute::<_, i64>($v)
-    };
-}
-
-#[macro_export]
-macro_rules! static_cast_u64 {
-    ($v:expr) => {
-        std::mem::transmute::<_, u64>($v)
-    };
-}
-
 pub struct Stage1<'a> {
     input: &'a [u8],
     len: usize,
@@ -45,6 +10,8 @@ pub struct Stage1<'a> {
 }
 
 impl<'a> Stage1<'a> {
+
+    #[inline]
     pub const fn new(input: &'a [u8]) -> Self {
         Self {
             input,
@@ -149,10 +116,13 @@ impl<'a> Stage1<'a> {
         structurals &= !quote_mask;
         structurals |= static_cast_u32!(quote_bits);
 
-        let brace_bits = _mm256_movemask_epi8(_mm256_cmpgt_epi8(
+        let mut brace_bits = _mm256_movemask_epi8(_mm256_cmpgt_epi8(
             _mm256_and_si256(lookup_mask, _mm256_set1_epi8(4)),
             _mm256_set1_epi8(0),
         ));
+
+        brace_bits &= static_cast_i32!(!quote_mask);
+        brace_bits |= static_cast_i32!(quote_bits);
 
         #[allow(overflowing_literals)]
         let mut brace_mask = _mm_cvtsi128_si32(_mm_clmulepi64_si128(

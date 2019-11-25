@@ -17,7 +17,7 @@ jemallocator = "0.3"
 bench = false
 
 [[bench]]
-name = "apache_access"
+name = "apache"
 harness = false
 
 [profile.bench]
