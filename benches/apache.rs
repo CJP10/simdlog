@@ -1,7 +1,9 @@
 use criterion::*;
 use jemallocator::Jemalloc;
-use simdlog::apache::access::avx2::{Stage1, Stage2};
-use simdlog::apache::access::parse;
+use simdlog::apache::access::avx2::{Stage1 as AccessStage1, Stage2 as AccessStage2};
+use simdlog::apache::access::parse as access_parse;
+use simdlog::apache::error::avx2::{Stage1 as ErrorStage1, Stage2 as ErrorStage2};
+use simdlog::apache::error::parse as error_parse;
 use std::fs::File;
 use std::io::Read;
 
@@ -21,25 +23,25 @@ fn bench(c: &mut Criterion) {
     common.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &common_lines {
-                Stage1::new(line.as_bytes()).find();
+                AccessStage1::new(line.as_bytes()).find();
             }
         })
     });
     common.bench_function("stage2", |b| {
         let common_lines: Vec<(&str, Vec<u32>)> = common_lines
             .iter()
-            .map(|s| (*s, Stage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, AccessStage1::new(s.as_bytes()).find()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &common_lines {
-                Stage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                AccessStage2::new_with_structurals(line.as_bytes(), structurals.clone());
             }
         })
     });
     common.bench_function("total", |b| {
         b.iter(|| {
             for line in &common_lines {
-                parse(line);
+                access_parse(line);
             }
         })
     });
@@ -57,25 +59,25 @@ fn bench(c: &mut Criterion) {
     combined.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &combined_lines {
-                Stage1::new(line.as_bytes()).find();
+                AccessStage1::new(line.as_bytes()).find();
             }
         })
     });
     combined.bench_function("stage2", |b| {
         let combined_lines: Vec<(&str, Vec<u32>)> = combined_lines
             .iter()
-            .map(|s| (*s, Stage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, AccessStage1::new(s.as_bytes()).find()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &combined_lines {
-                Stage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                AccessStage2::new_with_structurals(line.as_bytes(), structurals.clone());
             }
         })
     });
     combined.bench_function("total", |b| {
         b.iter(|| {
             for line in &combined_lines {
-                parse(line);
+                access_parse(line);
             }
         })
     });
@@ -93,25 +95,25 @@ fn bench(c: &mut Criterion) {
     error.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &error_lines {
-                Stage1::new(line.as_bytes()).find();
+                ErrorStage1::new(line.as_bytes()).find();
             }
         })
     });
     error.bench_function("stage2", |b| {
         let error_lines: Vec<(&str, Vec<u32>)> = error_lines
             .iter()
-            .map(|s| (*s, Stage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, ErrorStage1::new(s.as_bytes()).find()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &error_lines {
-                Stage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                ErrorStage2::new_with_structurals(line.as_bytes(), structurals.clone());
             }
         })
     });
     error.bench_function("total", |b| {
         b.iter(|| {
             for line in &error_lines {
-                parse(line);
+                error_parse(line);
             }
         })
     });
