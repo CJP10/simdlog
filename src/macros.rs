@@ -46,3 +46,15 @@ macro_rules! static_cast_slice {
         std::mem::transmute::<_, &[u8]>($v)
     };
 }
+
+#[macro_export]
+macro_rules! check {
+    ($parser:ident, $index:expr, $b:expr) => {
+        unsafe {
+            let s = *$parser.structurals.get_unchecked($index) as usize;
+            if *$parser.src.get_unchecked(s) != $b {
+                return None;
+            }
+        }
+    };
+}

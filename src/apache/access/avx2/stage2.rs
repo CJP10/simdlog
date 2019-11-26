@@ -1,18 +1,6 @@
 use super::Stage1;
 use crate::apache::access::Log;
 
-#[macro_export]
-macro_rules! check {
-    ($parser:ident, $index:expr, $b:expr) => {
-        unsafe {
-            let s = *$parser.structurals.get_unchecked($index) as usize;
-            if *$parser.src.get_unchecked(s) != $b {
-                return None;
-            }
-        }
-    };
-}
-
 pub struct Stage2<'a> {
     src: &'a [u8],
     structurals: Vec<u32>,
