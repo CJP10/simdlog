@@ -50,11 +50,26 @@ macro_rules! static_cast_slice {
 #[macro_export]
 macro_rules! check {
     ($parser:ident, $index:expr, $b:expr) => {
-        unsafe {
-            let s = *$parser.structurals.get_unchecked($index) as usize;
-            if *$parser.src.get_unchecked(s) != $b {
-                return None;
-            }
+        let s = *$parser.structurals.get_unchecked($index) as usize;
+        if *$parser.src.get_unchecked(s) != $b {
+            return None;
         }
     };
 }
+
+#[macro_export]
+macro_rules! get {
+    ($src:expr, $start:expr, $end:expr) => {
+        match $src.get($start..$end) {
+            Some(v) => static_cast_str!(v),
+            None => return None,
+        }
+    };
+    ($src:expr, $start:expr) => {
+        match $src.get($start..) {
+            Some(v) => static_cast_str!(v),
+            None => return None,
+        }
+    };
+}
+

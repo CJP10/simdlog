@@ -28,63 +28,65 @@ impl<'a> Stage2<'a> {
             return None;
         }
 
-        check!(self, 0, b' ');
-        let end = self.structurals[0] as usize;
-        log.ip = unsafe { static_cast_str!(self.src.get_unchecked(0..end)) };
+        unsafe {
+            check!(self, 0, b' ');
+            let end = self.structurals[0]as usize;
+            log.ip = get!(self.src, 0, end);
 
-        check!(self, 1, b' ');
-        let start = self.structurals[0] as usize + 1;
-        let end = self.structurals[1] as usize;
-        log.identity = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
+            check!(self, 1, b' ');
+            let start = self.structurals[0] as usize + 1;
+            let end = self.structurals[1] as usize;
+            log.identity = get!(self.src, start, end);
 
-        check!(self, 2, b' ');
-        let start = self.structurals[1] as usize + 1;
-        let end = self.structurals[2] as usize;
-        log.user = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
+            check!(self, 2, b' ');
+            let start = self.structurals[1] as usize + 1;
+            let end = self.structurals[2] as usize;
+            log.user = get!(self.src, start, end);
 
-        check!(self, 3, b'[');
-        check!(self, 4, b']');
-        let start = self.structurals[3] as usize + 1;
-        let end = self.structurals[4] as usize;
-        log.date = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
+            check!(self, 3, b'[');
+            check!(self, 4, b']');
+            let start = self.structurals[3] as usize + 1;
+            let end = self.structurals[4] as usize;
+            log.date = get!(self.src, start, end);
 
-        check!(self, 5, b' ');
-        check!(self, 6, b'"');
-        check!(self, 7, b'"');
-        let start = self.structurals[6] as usize + 1;
-        let end = self.structurals[7] as usize;
-        log.message = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
+            check!(self, 5, b' ');
+            check!(self, 6, b'"');
+            check!(self, 7, b'"');
+            let start = self.structurals[6] as usize + 1;
+            let end = self.structurals[7] as usize;
+            log.message = get!(self.src, start, end);
 
-        check!(self, 8, b' ');
-        check!(self, 9, b' ');
-        let start = self.structurals[8] as usize + 1;
-        let end = self.structurals[9] as usize;
-        log.status = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
+            check!(self, 8, b' ');
+            check!(self, 9, b' ');
+            let start = self.structurals[8] as usize + 1;
+            let end = self.structurals[9] as usize;
+            log.status = get!(self.src, start, end);
 
-        if self.structurals.len() == 10 {
+            if self.structurals.len() == 10 {
+                let start = self.structurals[9] as usize + 1;
+                log.code = get!(self.src, start);
+                return Some(log);
+            }
+
+            check!(self, 10, b' ');
             let start = self.structurals[9] as usize + 1;
-            log.code = unsafe { static_cast_str!(self.src.get_unchecked(start..)) };
-            return Some(log);
+            let end = self.structurals[10] as usize;
+            log.code = get!(self.src, start, end);
+
+            check!(self, 11, b'"');
+            check!(self, 12, b'"');
+            let start = self.structurals[11] as usize + 1;
+            let end = self.structurals[12] as usize;
+            log.referer = get!(self.src, start, end);
+
+            check!(self, 13, b' ');
+            check!(self, 14, b'"');
+            check!(self, 15, b'"');
+            let start = self.structurals[14] as usize + 1;
+            let end = self.structurals[15] as usize;
+            log.user_agent = get!(self.src, start, end);
+
+            Some(log)
         }
-
-        check!(self, 10, b' ');
-        let start = self.structurals[9] as usize + 1;
-        let end = self.structurals[10] as usize;
-        log.code = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
-
-        check!(self, 11, b'"');
-        check!(self, 12, b'"');
-        let start = self.structurals[11] as usize + 1;
-        let end = self.structurals[12] as usize;
-        log.referer = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
-
-        check!(self, 13, b' ');
-        check!(self, 14, b'"');
-        check!(self, 15, b'"');
-        let start = self.structurals[14] as usize + 1;
-        let end = self.structurals[15] as usize;
-        log.user_agent = unsafe { static_cast_str!(self.src.get_unchecked(start..end)) };
-
-        Some(log)
     }
 }
