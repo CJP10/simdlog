@@ -1,6 +1,6 @@
 use criterion::*;
 use jemallocator::Jemalloc;
-use simdlog::apache::access::avx2::{Stage2, Stage1};
+use simdlog::apache::access::avx2::{Stage1, Stage2};
 use simdlog::apache::access::parse;
 use std::fs::File;
 use std::io::Read;
@@ -80,7 +80,6 @@ fn bench(c: &mut Criterion) {
         })
     });
     combined.finish();
-
 }
 
 criterion_group!(benches, bench);

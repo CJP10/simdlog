@@ -19,7 +19,6 @@ pub struct Stage2<'a> {
 }
 
 impl<'a> Stage2<'a> {
-
     #[inline]
     pub fn new(src: &'a [u8]) -> Self {
         Self {
@@ -30,10 +29,7 @@ impl<'a> Stage2<'a> {
 
     #[inline]
     pub fn new_with_structurals(src: &'a [u8], structurals: Vec<u32>) -> Self {
-        Self {
-            src,
-            structurals,
-        }
+        Self { src, structurals }
     }
 
     #[inline]

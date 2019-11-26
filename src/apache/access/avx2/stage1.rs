@@ -1,3 +1,4 @@
+use crate::avx2::cmpeq_mask;
 use std::arch::x86_64::*;
 
 pub struct Stage1<'a> {
@@ -10,7 +11,6 @@ pub struct Stage1<'a> {
 }
 
 impl<'a> Stage1<'a> {
-
     #[inline]
     pub const fn new(input: &'a [u8]) -> Self {
         Self {
@@ -66,42 +66,11 @@ impl<'a> Stage1<'a> {
 
     #[inline(always)]
     unsafe fn structurals_mask(&mut self, v: __m256i) -> u32 {
-        // " 0x22 value = 2
-        // SPACE 0x20 value = 1
-        // [ 0x5b value = 4
-        // ] 0x5d value = 4
+        let quote_bits = cmpeq_mask(v, b'"');
+        let mut brace_bits = cmpeq_mask(v, b'[') | cmpeq_mask(v, b']');
+        let space_bits = cmpeq_mask(v, b' ');
 
-        #[rustfmt::skip]
-        let high_mask = _mm256_setr_epi8(
-        //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-            0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 3, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        );
-
-        #[rustfmt::skip]
-        let low_mask = _mm256_setr_epi8(
-        //  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0,
-            1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 4, 0, 0,
-        );
-
-        let low = _mm256_shuffle_epi8(low_mask, v);
-        let high = _mm256_shuffle_epi8(
-            high_mask,
-            _mm256_and_si256(_mm256_srli_epi32(v, 4), _mm256_set1_epi8(0x7f)),
-        );
-
-        let lookup_mask = _mm256_and_si256(low, high);
-
-        let mut structurals = static_cast_u32!(_mm256_movemask_epi8(_mm256_cmpgt_epi8(
-            lookup_mask,
-            _mm256_set1_epi8(0)
-        )));
-
-        let quote_bits = _mm256_movemask_epi8(_mm256_cmpeq_epi8(
-            v,
-            _mm256_set1_epi8(static_cast_i8!(b'"')),
-        ));
+        let mut structurals = quote_bits | brace_bits | space_bits;
 
         #[allow(overflowing_literals)]
         let mut quote_mask = _mm_cvtsi128_si32(_mm_clmulepi64_si128(
@@ -114,15 +83,9 @@ impl<'a> Stage1<'a> {
         self.inside_quotes = static_cast_u32!(static_cast_i32!(quote_mask) >> 31);
 
         structurals &= !quote_mask;
-        structurals |= static_cast_u32!(quote_bits);
+        structurals |= quote_bits;
 
-        let mut brace_bits = _mm256_movemask_epi8(_mm256_cmpgt_epi8(
-            _mm256_and_si256(lookup_mask, _mm256_set1_epi8(4)),
-            _mm256_set1_epi8(0),
-        ));
-
-        brace_bits &= static_cast_i32!(!quote_mask);
-        brace_bits |= static_cast_i32!(quote_bits);
+        brace_bits &= !quote_mask;
 
         #[allow(overflowing_literals)]
         let mut brace_mask = _mm_cvtsi128_si32(_mm_clmulepi64_si128(
@@ -135,7 +98,7 @@ impl<'a> Stage1<'a> {
         self.inside_braces = static_cast_u32!(static_cast_i32!(brace_mask) >> 31);
 
         structurals &= !brace_mask;
-        structurals |= static_cast_u32!(brace_bits);
+        structurals |= brace_bits;
 
         structurals
     }

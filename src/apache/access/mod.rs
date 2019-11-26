@@ -3,9 +3,7 @@ pub mod avx2;
 #[cfg(target_feature = "avx2")]
 #[inline]
 pub fn parse(line: &str) -> Option<Log> {
-    let mut stage = avx2::Stage2::new(
-        unsafe { static_cast_slice!(line) }
-    );
+    let mut stage = avx2::Stage2::new(unsafe { static_cast_slice!(line) });
     stage.parse()
 }
 
@@ -30,7 +28,6 @@ pub struct Log<'a> {
 }
 
 impl<'a> Log<'a> {
-
     #[inline]
     pub const fn new() -> Log<'a> {
         Log {
