@@ -58,26 +58,31 @@ pub fn flatten_bits(index: usize, structurals: &mut Vec<u32>, mut bits: u64) {
 }
 
 #[inline(always)]
-pub unsafe fn load_2x256(src: &[u8], index: usize) -> (__m256i, __m256i) {
-    let mut padding = [0u8; 64];
+pub unsafe fn load_2x256(src: &[u8], index: usize, padding: &mut [u8]) -> (__m256i, __m256i) {
     let len = src.len();
 
     if len >= index + 64 {
-        unsafe {
-            (
-                _mm256_loadu_si256(src.as_ptr().add(index) as *const __m256i),
-                _mm256_loadu_si256(src.as_ptr().add(index + 32) as *const __m256i),
-            )
-        }
+        (
+            _mm256_loadu_si256(src.as_ptr().add(index) as *const __m256i),
+            _mm256_loadu_si256(src.as_ptr().add(index + 32) as *const __m256i),
+        )
     } else {
-        unsafe {
-            padding
-                .get_unchecked_mut(..len - index)
-                .clone_from_slice(src.get_unchecked(index..));
-            (
-                _mm256_loadu_si256(padding.as_ptr() as *const __m256i),
-                _mm256_loadu_si256(padding.as_ptr().add(32) as *const __m256i),
-            )
-        }
+        padding
+            .get_unchecked_mut(..len - index)
+            .clone_from_slice(src.get_unchecked(index..));
+        (
+            _mm256_loadu_si256(padding.as_ptr() as *const __m256i),
+            _mm256_loadu_si256(padding.as_ptr().add(32) as *const __m256i),
+        )
     }
+}
+
+#[inline(always)]
+#[allow(overflowing_literals)]
+pub unsafe fn fill_mask(mask: u32) -> u32 {
+    static_cast_u32!(_mm_cvtsi128_si32(_mm_clmulepi64_si128(
+        _mm_set_epi32(0, 0, 0, static_cast_i32!(mask)),
+        _mm_set1_epi8(0xFF),
+        0,
+    )))
 }

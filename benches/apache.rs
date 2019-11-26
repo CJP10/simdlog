@@ -80,6 +80,42 @@ fn bench(c: &mut Criterion) {
         })
     });
     combined.finish();
+
+    let mut buf = String::new();
+    File::open("samples/apache_error.txt")
+        .unwrap()
+        .read_to_string(&mut buf)
+        .unwrap();
+    let error_lines: Vec<&str> = buf.lines().collect();
+
+    let mut error = c.benchmark_group("apache/error");
+    error.throughput(Throughput::Bytes(buf.len() as u64));
+    error.bench_function("stage1", |b| {
+        b.iter(|| {
+            for line in &error_lines {
+                Stage1::new(line.as_bytes()).find();
+            }
+        })
+    });
+    error.bench_function("stage2", |b| {
+        let error_lines: Vec<(&str, Vec<u32>)> = error_lines
+            .iter()
+            .map(|s| (*s, Stage1::new(s.as_bytes()).find()))
+            .collect();
+        b.iter(|| {
+            for (line, structurals) in &error_lines {
+                Stage2::new_with_structurals(line.as_bytes(), structurals.clone());
+            }
+        })
+    });
+    error.bench_function("total", |b| {
+        b.iter(|| {
+            for line in &error_lines {
+                parse(line);
+            }
+        })
+    });
+    error.finish();
 }
 
 criterion_group!(benches, bench);
