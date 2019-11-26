@@ -48,28 +48,56 @@ macro_rules! static_cast_slice {
 }
 
 #[macro_export]
-macro_rules! check {
-    ($parser:ident, $index:expr, $b:expr) => {
-        let s = *$parser.structurals.get_unchecked($index) as usize;
-        if *$parser.src.get_unchecked(s) != $b {
-            return None;
+macro_rules! read {
+    ($parser:ident, $src:expr, $b:expr) => {
+        match $parser.structurals.get($parser.structurals_i) {
+            Some(src_i) => {
+                if $src[*src_i as usize] != $b {
+                    return Err(());
+                }
+            }
+            None => {
+                return Err(());
+            }
+        };
+    };
+}
+
+#[macro_export]
+macro_rules! read_until {
+    ($parser:ident, $src:expr, $b:expr) => {
+        loop {
+            match $parser.structurals.get($parser.structurals_i) {
+                Some(src_i) => {
+                    if $src[*src_i as usize] != $b {
+                        $parser.structurals_i += 1;
+                        continue;
+                    }
+                    break;
+                }
+                None => {
+                    return Err(());
+                }
+            }
         }
     };
 }
 
 #[macro_export]
-macro_rules! get {
-    ($src:expr, $start:expr, $end:expr) => {
-        match $src.get($start..$end) {
-            Some(v) => static_cast_str!(v),
-            None => return None,
-        }
-    };
-    ($src:expr, $start:expr) => {
-        match $src.get($start..) {
-            Some(v) => static_cast_str!(v),
-            None => return None,
-        }
+macro_rules! bump {
+    ($parser:ident) => {
+        $parser.structurals_i += 1;
     };
 }
 
+#[macro_export]
+macro_rules! index {
+    ($parser:ident) => {
+        match $parser.structurals.get($parser.structurals_i) {
+            Some(src_i) => *src_i as usize,
+            None => {
+                return Err(());
+            }
+        };
+    };
+}

@@ -1,9 +1,10 @@
 use criterion::*;
 use jemallocator::Jemalloc;
-use simdlog::apache::access::avx2::{Stage1 as AccessStage1, Stage2 as AccessStage2};
-use simdlog::apache::access::parse as access_parse;
-use simdlog::apache::error::avx2::{Stage1 as ErrorStage1, Stage2 as ErrorStage2};
-use simdlog::apache::error::parse as error_parse;
+use simdlog::parsers::apache::{
+    ApacheCombinedParser, ApacheCommonParser, ApacheErrorParser, ApacheParser,
+};
+use simdlog::parsers::Parser;
+use simdlog::stage1::Stage1;
 use std::fs::File;
 use std::io::Read;
 
@@ -11,113 +12,131 @@ use std::io::Read;
 static GLOBAL: Jemalloc = Jemalloc;
 
 fn bench(c: &mut Criterion) {
-    let mut buf = String::new();
+    let mut common_lines_buf = String::new();
     File::open("samples/apache_common.txt")
         .unwrap()
-        .read_to_string(&mut buf)
+        .read_to_string(&mut common_lines_buf)
         .unwrap();
-    let common_lines: Vec<&str> = buf.lines().collect();
+    let common_lines: Vec<&str> = common_lines_buf.lines().collect();
 
     let mut common = c.benchmark_group("apache/common");
-    common.throughput(Throughput::Bytes(buf.len() as u64));
+    common.throughput(Throughput::Bytes(common_lines_buf.len() as u64));
     common.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &common_lines {
-                AccessStage1::new(line.as_bytes()).find();
+                Stage1::new(line).parse();
             }
         })
     });
     common.bench_function("stage2", |b| {
         let common_lines: Vec<(&str, Vec<u32>)> = common_lines
             .iter()
-            .map(|s| (*s, AccessStage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &common_lines {
-                AccessStage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                ApacheCommonParser::new(structurals).parse(line);
             }
         })
     });
     common.bench_function("total", |b| {
         b.iter(|| {
             for line in &common_lines {
-                access_parse(line);
+                ApacheCommonParser::new(&Stage1::new(line).parse()).parse(line);
             }
         })
     });
     common.finish();
 
-    let mut buf = String::new();
+    let mut combined_lines_buf = String::new();
     File::open("samples/apache_combined.txt")
         .unwrap()
-        .read_to_string(&mut buf)
+        .read_to_string(&mut combined_lines_buf)
         .unwrap();
-    let combined_lines: Vec<&str> = buf.lines().collect();
+    let combined_lines: Vec<&str> = combined_lines_buf.lines().collect();
 
     let mut combined = c.benchmark_group("apache/combined");
-    combined.throughput(Throughput::Bytes(buf.len() as u64));
+    combined.throughput(Throughput::Bytes(combined_lines_buf.len() as u64));
     combined.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &combined_lines {
-                AccessStage1::new(line.as_bytes()).find();
+                Stage1::new(line).parse();
             }
         })
     });
     combined.bench_function("stage2", |b| {
         let combined_lines: Vec<(&str, Vec<u32>)> = combined_lines
             .iter()
-            .map(|s| (*s, AccessStage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &combined_lines {
-                AccessStage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                ApacheCombinedParser::new(structurals).parse(line);
             }
         })
     });
     combined.bench_function("total", |b| {
         b.iter(|| {
             for line in &combined_lines {
-                access_parse(line);
+                ApacheCombinedParser::new(&Stage1::new(line).parse()).parse(line);
             }
         })
     });
     combined.finish();
 
-    let mut buf = String::new();
+    let mut error_lines_buf = String::new();
     File::open("samples/apache_error.txt")
         .unwrap()
-        .read_to_string(&mut buf)
+        .read_to_string(&mut error_lines_buf)
         .unwrap();
-    let error_lines: Vec<&str> = buf.lines().collect();
+    let error_lines: Vec<&str> = error_lines_buf.lines().collect();
 
     let mut error = c.benchmark_group("apache/error");
-    error.throughput(Throughput::Bytes(buf.len() as u64));
+    error.throughput(Throughput::Bytes(error_lines_buf.len() as u64));
     error.bench_function("stage1", |b| {
         b.iter(|| {
             for line in &error_lines {
-                ErrorStage1::new(line.as_bytes()).find();
+                Stage1::new(line).parse();
             }
         })
     });
     error.bench_function("stage2", |b| {
         let error_lines: Vec<(&str, Vec<u32>)> = error_lines
             .iter()
-            .map(|s| (*s, ErrorStage1::new(s.as_bytes()).find()))
+            .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
             for (line, structurals) in &error_lines {
-                ErrorStage2::new_with_structurals(line.as_bytes(), structurals.clone());
+                ApacheErrorParser::new(structurals).parse(line);
             }
         })
     });
     error.bench_function("total", |b| {
         b.iter(|| {
             for line in &error_lines {
-                error_parse(line);
+                ApacheErrorParser::new(&Stage1::new(line).parse()).parse(line);
             }
         })
     });
     error.finish();
+
+    let mut all = c.benchmark_group("apache/all");
+    all.throughput(Throughput::Bytes(
+        (common_lines_buf.len() + combined_lines_buf.len() + error_lines_buf.len()) as u64,
+    ));
+    all.bench_function("total", |b| {
+        b.iter(|| {
+            for line in &common_lines {
+                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
+            }
+            for line in &combined_lines {
+                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
+            }
+            for line in &error_lines {
+                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
+            }
+        })
+    });
 }
 
 criterion_group!(benches, bench);
