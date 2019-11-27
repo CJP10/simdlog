@@ -23,9 +23,9 @@ fn bench(c: &mut Criterion) {
     common.throughput(Throughput::Bytes(common_lines_buf.len() as u64));
     common.bench_function("stage1", |b| {
         b.iter(|| {
-            for line in &common_lines {
+            common_lines.iter().for_each(|line| {
                 Stage1::new(line).parse();
-            }
+            });
         })
     });
     common.bench_function("stage2", |b| {
@@ -34,16 +34,18 @@ fn bench(c: &mut Criterion) {
             .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
-            for (line, structurals) in &common_lines {
-                ApacheCommonParser::new(structurals).parse(line);
-            }
+            common_lines.iter().for_each(|(line, structurals)| {
+                ApacheCommonParser::new(structurals).parse(line).unwrap();
+            });
         })
     });
     common.bench_function("total", |b| {
         b.iter(|| {
-            for line in &common_lines {
-                ApacheCommonParser::new(&Stage1::new(line).parse()).parse(line);
-            }
+            common_lines.iter().for_each(|line| {
+                ApacheCommonParser::new(&Stage1::new(line).parse())
+                    .parse(line)
+                    .unwrap();
+            });
         })
     });
     common.finish();
@@ -59,9 +61,9 @@ fn bench(c: &mut Criterion) {
     combined.throughput(Throughput::Bytes(combined_lines_buf.len() as u64));
     combined.bench_function("stage1", |b| {
         b.iter(|| {
-            for line in &combined_lines {
+            combined_lines.iter().for_each(|line| {
                 Stage1::new(line).parse();
-            }
+            });
         })
     });
     combined.bench_function("stage2", |b| {
@@ -70,16 +72,18 @@ fn bench(c: &mut Criterion) {
             .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
-            for (line, structurals) in &combined_lines {
-                ApacheCombinedParser::new(structurals).parse(line);
-            }
+            combined_lines.iter().for_each(|(line, structurals)| {
+                ApacheCombinedParser::new(structurals).parse(line).unwrap();
+            });
         })
     });
     combined.bench_function("total", |b| {
         b.iter(|| {
-            for line in &combined_lines {
-                ApacheCombinedParser::new(&Stage1::new(line).parse()).parse(line);
-            }
+            combined_lines.iter().for_each(|line| {
+                ApacheCombinedParser::new(&Stage1::new(line).parse())
+                    .parse(line)
+                    .unwrap();
+            });
         })
     });
     combined.finish();
@@ -95,9 +99,9 @@ fn bench(c: &mut Criterion) {
     error.throughput(Throughput::Bytes(error_lines_buf.len() as u64));
     error.bench_function("stage1", |b| {
         b.iter(|| {
-            for line in &error_lines {
+            error_lines.iter().for_each(|line| {
                 Stage1::new(line).parse();
-            }
+            });
         })
     });
     error.bench_function("stage2", |b| {
@@ -106,16 +110,18 @@ fn bench(c: &mut Criterion) {
             .map(|s| (*s, Stage1::new(s).parse()))
             .collect();
         b.iter(|| {
-            for (line, structurals) in &error_lines {
-                ApacheErrorParser::new(structurals).parse(line);
-            }
+            error_lines.iter().for_each(|(line, structurals)| {
+                ApacheErrorParser::new(structurals).parse(line).unwrap();
+            });
         })
     });
     error.bench_function("total", |b| {
         b.iter(|| {
-            for line in &error_lines {
-                ApacheErrorParser::new(&Stage1::new(line).parse()).parse(line);
-            }
+            error_lines.iter().for_each(|line| {
+                ApacheErrorParser::new(&Stage1::new(line).parse())
+                    .parse(line)
+                    .unwrap();
+            });
         })
     });
     error.finish();
@@ -125,16 +131,16 @@ fn bench(c: &mut Criterion) {
         (common_lines_buf.len() + combined_lines_buf.len() + error_lines_buf.len()) as u64,
     ));
     all.bench_function("total", |b| {
+        let mut all_lines = Vec::new();
+        all_lines.extend_from_slice(&common_lines);
+        all_lines.extend_from_slice(&combined_lines);
+        all_lines.extend_from_slice(&error_lines);
         b.iter(|| {
-            for line in &common_lines {
-                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
-            }
-            for line in &combined_lines {
-                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
-            }
-            for line in &error_lines {
-                ApacheParser::new(&Stage1::new(line).parse()).parse(line);
-            }
+            all_lines.iter().for_each(|line| {
+                ApacheParser::new(&Stage1::new(line).parse())
+                    .parse(line)
+                    .unwrap();
+            });
         })
     });
 }
