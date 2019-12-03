@@ -522,7 +522,7 @@ mod tests {
             }
             match log {
                 Ok(ApacheLog::Common(_)) => {}
-                _ =>  panic!("failed to parse: {:?}", log.unwrap()),
+                _ => panic!("failed to parse: {:?}", log.unwrap()),
             }
         }
 
@@ -541,7 +541,7 @@ mod tests {
             }
             match log {
                 Ok(ApacheLog::Combined(_)) => {}
-                _ =>  panic!("failed to parse: {:?}", log.unwrap()),
+                _ => panic!("failed to parse: {:?}", log.unwrap()),
             }
         }
 
@@ -560,7 +560,7 @@ mod tests {
             }
             match log {
                 Ok(ApacheLog::Error(_)) => {}
-                _ =>  panic!("failed to parse: {:?}", log.unwrap()),
+                _ => panic!("failed to parse: {:?}", log.unwrap()),
             }
         }
     }
