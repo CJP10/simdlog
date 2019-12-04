@@ -1,4 +1,5 @@
 pub mod apache;
+pub mod syslog;
 
 pub trait Parser<'a> {
     type Log;
